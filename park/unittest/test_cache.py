@@ -1,5 +1,5 @@
 import unittest
-from park.unittest.run_env import run_env_with_random_agent
+from run_env import run_env_with_random_agent
 
 
 class TestCache(unittest.TestCase):

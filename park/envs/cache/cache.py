@@ -3,10 +3,14 @@ import pandas as pd
 from collections import Counter, defaultdict
 import heapq
 
-from park import core, spaces, logger
+from park import core, logger
 from park.param import config
 from park.utils import seeding
 from park.envs.cache.trace_loader import load_traces
+import gym
+from gym.spaces import Discrete
+from gym.spaces import Box
+import inspect
 
 accept = 1
 reject = 0
@@ -44,7 +48,7 @@ class TraceSrc(object):
 
     def step(self):
         #  Obs is: (obj_time, obj_id, obj_size)
-        #  print("req id in trace step:", self.req)
+        #  print("req id in trace step:", self.req)''
         obs = self.load_trace.iloc[self.req].values
         self.req += 1
         done = self.req >= self.n_request
@@ -81,6 +85,7 @@ class CacheSim(object):
         self.req = 0
         self.non_cache = defaultdict(list)
         self.cache = defaultdict(list)  # requested items with caching
+        self.position_map = {}
         self.cache_pq = []
         self.cache_remain = self.cache_size
         self.last_req_time_dict = {}
@@ -92,6 +97,7 @@ class CacheSim(object):
         self.req = 0
         self.non_cache = defaultdict(list)
         self.cache = defaultdict(list)
+        self.position_map = {}
         self.cache_pq = []
         self.cache_remain = self.cache_size
         self.last_req_time_dict = {}
@@ -206,11 +212,14 @@ class CacheSim(object):
                 req = self.req - self.non_cache[obj_id][1]
             except IndexError:
                 req = 500
+                #print(obj_size, self.cache_remain, req)
         state = [obj_size, self.cache_remain, req]
+
+        #print(state)
 
         return state
 
-class CacheEnv(core.Env):
+class CacheEnv(gym.Env):
     """
     Cache description.
 
@@ -238,8 +247,9 @@ class CacheEnv(core.Env):
         self.src = TraceSrc(trace=config.cache_trace, cache_size=self.cache_size)
 
         # set up the state and action space
-        self.action_space = spaces.Discrete(2)
-        self.observation_space = spaces.Box(self.src.min_values, \
+        #TODO: Modify the action space size to C+1
+        self.action_space = Discrete(2)
+        self.observation_space = Box(self.src.min_values, \
                                       self.src.max_values, \
                                       dtype=np.float32)
 
@@ -250,16 +260,20 @@ class CacheEnv(core.Env):
                             state_space=self.observation_space)
 
         # reset environment (generate new jobs)
-        self.reset(1, 2)
+        #self.reset(1, 2)
 
     def reset(self, low=1, high=1001):
+        print('env.reset called')
+        print('caller name:', inspect.stack()[1][3])
         new_trace = self.np_random.randint(low, high)
+        print(new_trace)
         self.src.reset(new_trace)
         self.sim.reset()
         if config.cache_trace == 'test':
             print("New Env Start", new_trace)
         elif config.cache_trace == 'real':
             print("New Env Start Real")
+        #print(self.sim.get_state())
         return self.sim.get_state()
 
     def seed(self, seed):

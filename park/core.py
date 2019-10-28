@@ -1,8 +1,10 @@
 from park import logger
+import gym
+from gym.spaces import space
 
 
 # Env-related abstractions
-class Env(object):
+class Env(gym.Env):
     """
     The main park class. The interface follows OpenAI gym
     https://gym.openai.com, which encapsulates an environment with
@@ -109,7 +111,7 @@ class SysEnv(object):
 
 
 # Space-related abstractions
-class Space(object):
+class Space(space.Space):
     """
     Defines the observation and action spaces, so you can write generic
     code that applies to any Env. For example, you can choose a random
@@ -120,6 +122,7 @@ class Space(object):
         self.struct = struct  # tensor, graph, etc.
         self.shape = None if shape is None else tuple(shape)
         self.dtype = None if dtype is None else np.dtype(dtype)
+        space.Space.__init__(self, shape, dtype)
 
     def sample(self):
         """

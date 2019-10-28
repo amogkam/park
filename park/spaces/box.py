@@ -2,9 +2,10 @@ import numpy as np
 
 from park import core, logger
 from park.spaces.rng import np_random
+from gym.spaces import space
 
 
-class Box(core.Space):
+class Box(space.Box):
     """
     A box in R^n.
     I.e., each coordinate is bounded.
@@ -34,7 +35,8 @@ class Box(core.Space):
 
         self.low = low.astype(dtype)
         self.high = high.astype(dtype)
-        core.Space.__init__(self, struct, shape, dtype)
+        #core.Space.__init__(self, struct, shape, dtype)
+        space.Box.__init__(self, low, high, shape, dtype)
 
     def sample(self):
         return np_random.uniform(low=self.low, high=self.high + (0 if self.dtype.kind == 'f' else 1), size=self.low.shape).astype(self.dtype)

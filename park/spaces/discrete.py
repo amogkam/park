@@ -1,9 +1,10 @@
 import numpy as np
 from park import core
 from park.spaces.rng import np_random
+from gym.spaces import space
 
 
-class Discrete(core.Space):
+class Discrete(space.Discrete):
     """
     {0,1,...,n-1}
     Example usage:
@@ -11,7 +12,8 @@ class Discrete(core.Space):
     """
     def __init__(self, n):
         self.n = n
-        core.Space.__init__(self, 'tensor_int64', (), np.int64)
+        #core.Space.__init__(self, 'tensor_int64', (), np.int64)
+        space.Discrete.__init__(self, (), np.int64)
 
     def sample(self):
         return np_random.randint(self.n)
