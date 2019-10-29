@@ -85,7 +85,6 @@ class CacheSim(object):
         self.req = 0
         self.non_cache = defaultdict(list)
         self.cache = defaultdict(list)  # requested items with caching
-        self.position_map = {}
         self.cache_pq = []
         self.cache_remain = self.cache_size
         self.last_req_time_dict = {}
@@ -97,7 +96,6 @@ class CacheSim(object):
         self.req = 0
         self.non_cache = defaultdict(list)
         self.cache = defaultdict(list)
-        self.position_map = {}
         self.cache_pq = []
         self.cache_remain = self.cache_size
         self.last_req_time_dict = {}
@@ -110,7 +108,7 @@ class CacheSim(object):
         # print(self.req)
         cache_size_online_remain = self.cache_remain
         discard_obj_if_admit = []
-        obj_time, obj_id, obj_size = obj[0], obj[1], obj[2]
+        obj_time, obj_id, obj_size = obj[0], obj[1], 1
 
 
         # Initialize the last request time
@@ -205,6 +203,7 @@ class CacheSim(object):
         Return the state of the object,  [obj_size, cache_size_online_remain, self.last_req_time_dict[obj_id]]
         '''
         obj_time, obj_id, obj_size = obj[0], obj[1], obj[2]
+        obj_size = 1
         try:
             req = self.req - self.cache[obj_id][1]
         except IndexError:
@@ -213,7 +212,7 @@ class CacheSim(object):
             except IndexError:
                 req = 500
                 #print(obj_size, self.cache_remain, req)
-        state = [obj_size, self.cache_remain, req]
+        state = [1, self.cache_remain, req]
 
         #print(state)
 
@@ -241,7 +240,8 @@ class CacheEnv(gym.Env):
     """
     def __init__(self, seed=42):
         self.seed(seed)
-        self.cache_size = config.cache_size
+        #self.cache_size = config.cache_size
+        self.cache_size = 10
 
         # load trace, attach initial online feature values
         self.src = TraceSrc(trace=config.cache_trace, cache_size=self.cache_size)

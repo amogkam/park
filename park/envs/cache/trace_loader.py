@@ -24,7 +24,7 @@ def load_traces(trace, cache_size, rnd):
         # load time, request id, request size
         df = pd.read_csv(trace_folder + 'test_trace/test_' + str(rnd) + '.tr', sep=' ', header=None)
         # remaining cache size, object last access time
-        df[3], df[4] = cache_size, 0
+        df[2], df[3], df[4] = 1, cache_size, 0
 
     elif trace == 'real':
         trace_folder = park.__path__[0] + '/envs/cache/traces/'
@@ -45,6 +45,6 @@ def load_traces(trace, cache_size, rnd):
     else:
         # load user's trace
         df = pd.read_csv(trace, sep=' ', header=None)
-        df[3], df[4] = cache_size, 0
+        df[2], df[3], df[4] = 1, cache_size, 0
     
     return df
