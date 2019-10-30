@@ -33,23 +33,33 @@ class TraceSrc(object):
         self.cache_size = cache_size
         self.load_trace = load_traces(self.trace, self.cache_size, 0)
         self.n_request = len(self.load_trace)
+        print('Number of requests:', self.n_request)
         self.cache_size = cache_size
-        self.min_values = np.asarray([1, 0, 0])
-        self.max_values = np.asarray([self.cache_size, self.cache_size, max(self.load_trace[0])])
+
+        #Important: min_values and max_values are for the state [obj_size, cache_size_remain, last_requested_time]
+        #These are different values than the ones in the trace
+        #self.min_values = np.asarray([1, 0, 0])
+        #self.max_values = np.asarray([self.cache_size, self.cache_size, max(self.load_trace[0])])
+        self.min_values = np.asarray([0, 0])
+        self.max_values = np.asarray([self.cache_size, max(self.load_trace[0])])
         self.req = 0
 
     def reset(self, random):
         if self.trace == 'test':
             self.load_trace = load_traces(self.trace, self.cache_size, random)
+        print('Number of requests:', self.n_request)
         self.n_request = len(self.load_trace)
-        self.min_values = np.asarray([1, 0, 0])
-        self.max_values = np.asarray([self.cache_size, self.cache_size, max(self.load_trace[0])])
+        #elf.min_values = np.asarray([1, 0, 0])
+        #self.max_values = np.asarray([self.cache_size, self.cache_size, max(self.load_trace[0])])
+        self.min_values = np.asarray([0, 0])
+        self.max_values = np.asarray([self.cache_size, max(self.load_trace[0])])
         self.req = 0
 
     def step(self):
-        #  Obs is: (obj_time, obj_id, obj_size)
+        #  Obs is: (obj_time, obj_id)
         #  print("req id in trace step:", self.req)''
         obs = self.load_trace.iloc[self.req].values
+        #print(obs)
         self.req += 1
         done = self.req >= self.n_request
         return obs, done
@@ -83,24 +93,28 @@ class CacheSim(object):
         self.action_space = action_space
         self.observation_space = state_space
         self.req = 0
-        self.non_cache = defaultdict(list)
-        self.cache = defaultdict(list)  # requested items with caching
+        #self.non_cache = defaultdict(int)
+        #self.cache = defaultdict(int)  # requested items with caching
+        self.non_cache = {}
+        self.cache = {}
         self.cache_pq = []
         self.cache_remain = self.cache_size
         self.last_req_time_dict = {}
         self.count_ohr = 0
-        self.count_bhr = 0
+        #self.count_bhr = 0
         self.size_all = 0
 
     def reset(self):
         self.req = 0
-        self.non_cache = defaultdict(list)
-        self.cache = defaultdict(list)
+        #self.non_cache = defaultdict(int)
+        #self.cache = defaultdict(int)
+        self.cache = {}
+        self.non_cache = {}
         self.cache_pq = []
         self.cache_remain = self.cache_size
         self.last_req_time_dict = {}
         self.count_ohr = 0
-        self.count_bhr = 0
+        #self.count_bhr = 0
         self.size_all = 0
 
     def step(self, action, obj):
@@ -108,16 +122,16 @@ class CacheSim(object):
         # print(self.req)
         cache_size_online_remain = self.cache_remain
         discard_obj_if_admit = []
-        obj_time, obj_id, obj_size = obj[0], obj[1], 1
+        obj_time, obj_id = obj[0], obj[1]
 
 
         # Initialize the last request time
         try:
-            self.last_req_time_dict[obj_id] = req - self.cache[obj[1]][1]
-        except IndexError:
+            self.last_req_time_dict[obj_id] = req - self.cache[obj[1]]
+        except KeyError:
             try:
-                self.last_req_time_dict[obj_id] = req - self.non_cache[obj[1]][1]
-            except IndexError:
+                self.last_req_time_dict[obj_id] = req - self.non_cache[obj[1]]
+            except KeyError:
                 self.last_req_time_dict[obj_id] = 500
 
         # create the current state for cache simulator
@@ -125,94 +139,108 @@ class CacheSim(object):
 
         # simulation
         # if the object size is larger than cache size
-        if obj_size >= self.cache_size:
-            # record the request
-            cost += obj_size
-            hit = 0
-            try:
-                self.non_cache[obj_id][1] = req
-            except IndexError:
-                self.non_cache[obj_id] = [obj_size, req]
+        # if obj_size >= self.cache_size:
+        #     # record the request
+        #     cost += obj_size
+        #     hit = 0
+        #     try:
+        #         self.non_cache[obj_id][1] = req
+        #     except KeyError:
+        #         self.non_cache[obj_id] = [obj_size, req]
 
-        else:
-            #  Search the object in the cache
-            #  If hit
-            try:
-                self.cache[obj_id][1] = req
-                self.count_bhr += obj_size
-                self.count_ohr += 1
-                hit = 1
-                cost += obj_size
+        #else:
 
-            #  If not hit
-            except IndexError:
-                # accept request
-                if action == 1:
-                    # find the object in the cache, no cost, OHR and BHR ++
-                    # can't find the object in the cache, add the object into cache after replacement, cost ++
-                    while cache_size_online_remain < obj_size:
-                        rm_id = self.cache_pq[0][1]
-                        cache_size_online_remain += self.cache_pq[0][0]
-                        cost += self.cache_pq[0][0]
-                        discard_obj_if_admit.append(rm_id)
-                        heapq.heappop(self.cache_pq)
-                        del self.cache[rm_id]
+        #  Search the object in the cache
+        #  If hit
+        # find the object in the cache, no cost, OHR and BHR ++
+        try:
+            #print('hit')
+            test = self.cache[obj_id]
+            self.cache[obj_id] = req
+            self.count_ohr += 1
+            hit = 1
+            #cost += 1
 
-                    # add into cache
-                    self.cache[obj_id] = [obj_size, req]
-                    heapq.heappush(self.cache_pq, (obj_size, obj_id))
-                    cache_size_online_remain -= obj_size
+        #  If not hit
+        except KeyError:
+            #print('no hit')
+            # accept request
+            if action == 1:
+                # can't find the object in the cache, add the object into cache after replacement, cost ++
+                #while cache_size_online_remain < obj_size:
 
-                    # cost value is based on size, can be changed
-                    cost += obj_size
-                    hit = 0
+                #if there is no more space in the cache
+                if cache_size_online_remain <= 0:
+                    #rm_id = self.cache_pq[0][1]
+                    rm_id = self.cache_pq[0]
+                    cache_size_online_remain += 1
+                    #cost += 1
+                    discard_obj_if_admit.append(rm_id)
+                    heapq.heappop(self.cache_pq)
+                    del self.cache[rm_id]
 
-                # reject request
-                else:
-                    hit = 0
-                    # record the request to non_cache
-                    try:
-                        self.non_cache[obj_id][1] = req
-                    except IndexError:
-                        self.non_cache[obj_id] = [obj_size, req]
+                # add into cache
+                #self.cache[obj_id] = [obj_size, req]
+                self.cache[obj_id] = req
+                heapq.heappush(self.cache_pq, obj_id)
+                #print('cache size decrements', cache_size_online_remain)
+                cache_size_online_remain -= 1
 
-        self.size_all += obj_size 
-        bhr = float(self.count_bhr / self.size_all)
+                # cost value is based on size, can be changed
+                #cost += obj_size
+                hit = 0
+
+            # reject request
+            else:
+                hit = 0
+                # record the request to non_cache
+                try:
+                    self.non_cache[obj_id] = req
+                except KeyError:
+                    self.non_cache[obj_id] = req
+
+        #self.size_all += 1 
+        #bhr = float(self.count_bhr / self.size_all)
         ohr = float(self.count_ohr / (req + 1))
         # print("debug:", bhr, ohr)
-        reward = hit * cost
+        reward = hit
 
         self.req += 1
         self.cache_remain = cache_size_online_remain
 
         
-        info = [self.count_bhr, self.size_all, float(float(self.count_bhr) / float(self.size_all))]
-        return reward, info
+        #info = [self.count_bhr, self.size_all, float(float(self.count_bhr) / float(self.size_all))]
+        return reward
 
     def next_hit(self, obj):
         try:
             obj_id = obj[1]
-            self.cache[obj_id][1] = self.cache[obj_id][1]
+            #self.cache[obj_id][1] = self.cache[obj_id][1]
+            #self.cache[obj_id] = self.cache[obj_id]
+            test = self.cache[obj_id]
             return True
 
-        except IndexError:
+        except KeyError:
             return False
 
-    def get_state(self, obj=[0, 0, 0, 0]):
+    def get_state(self, obj=[0, 0]):
         '''
-        Return the state of the object,  [obj_size, cache_size_online_remain, self.last_req_time_dict[obj_id]]
+        Return the state of the object,  [cache_size_online_remain, self.last_req_time_dict[obj_id]]
         '''
-        obj_time, obj_id, obj_size = obj[0], obj[1], obj[2]
+        obj_time, obj_id = obj[0], obj[1]
+        #print(obj_time, obj_id)
         obj_size = 1
+        #print(len(self.cache))
         try:
-            req = self.req - self.cache[obj_id][1]
-        except IndexError:
+            req = self.req - self.cache[obj_id]
+        except KeyError:
             try:
-                req = self.req - self.non_cache[obj_id][1]
-            except IndexError:
+                req = self.req - self.non_cache[obj_id]
+            except KeyError:
                 req = 500
                 #print(obj_size, self.cache_remain, req)
-        state = [1, self.cache_remain, req]
+        #print(req)
+        state = [self.cache_remain, req]
 
         #print(state)
 
@@ -241,7 +269,7 @@ class CacheEnv(gym.Env):
     def __init__(self, seed=42):
         self.seed(seed)
         #self.cache_size = config.cache_size
-        self.cache_size = 10
+        self.cache_size = config.cache_size
 
         # load trace, attach initial online feature values
         self.src = TraceSrc(trace=config.cache_trace, cache_size=self.cache_size)
@@ -264,7 +292,7 @@ class CacheEnv(gym.Env):
 
     def reset(self, low=1, high=1001):
         print('env.reset called')
-        print('caller name:', inspect.stack()[1][3])
+        #print('caller name:', inspect.stack()[1][3])
         new_trace = self.np_random.randint(low, high)
         print(new_trace)
         self.src.reset(new_trace)
@@ -284,17 +312,18 @@ class CacheEnv(gym.Env):
         global accept
         assert self.action_space.contains(action)
         state, done = self.src.step()
-        reward, info = self.sim.step(action, state)
+        reward = self.sim.step(action, state)
         obj, done = self.src.next()
         while self.sim.next_hit(obj):
             state, done = self.src.step()
-            hit_reward, info = self.sim.step(accept, state)
+            hit_reward = self.sim.step(accept, state)
             reward += hit_reward
             if done is True:
                 break
             obj, done = self.src.next()
 
         obs = self.sim.get_state(obj)
+        #print(obs)
         info = {}
         return obs, reward, done, info
 

@@ -101,7 +101,7 @@ parser.add_argument('--qopt_recompute_fixed_planners', type=int, required=False,
 # -- Cache --
 parser.add_argument('--cache_trace', type=str, required=False, default='test', 
                     help='trace selection')
-parser.add_argument('--cache_size', type=int, required=False, default=1024, 
+parser.add_argument('--cache_size', type=int, required=False, default=10, 
                     help='size of network cache')
 
 # -- Simple Queue --
