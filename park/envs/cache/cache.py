@@ -41,8 +41,10 @@ class TraceSrc(object):
         #self.min_values = np.asarray([1, 0, 0])
         #self.max_values = np.asarray([self.cache_size, self.cache_size, max(self.load_trace[0])])
         self.min_values = np.asarray([0]*(self.cache_size+1))
-        self.max_values = np.asarray([max(self.load_trace[0])]*(self.cache_size+1))
+        #self.max_values = np.asarray([max(self.load_trace[0])]*(self.cache_size+1))
+        self.max_values = np.asarray([1]*(self.cache_size + 1))
         self.req = 0
+        self.step_counter = 1
 
     def reset(self, random):
         if self.trace == 'test':
@@ -52,13 +54,17 @@ class TraceSrc(object):
         #elf.min_values = np.asarray([1, 0, 0])
         #self.max_values = np.asarray([self.cache_size, self.cache_size, max(self.load_trace[0])])
         self.min_values = np.asarray([0]*(self.cache_size+1))
-        self.max_values = np.asarray([max(self.load_trace[0])]*(self.cache_size+1))
+        #self.max_values = np.asarray([max(self.load_trace[0])]*(self.cache_size+1))
+        self.max_values = np.asarray([1]*(self.cache_size + 1))
         self.req = 0
+        self.step_counter = 1
 
     def step(self):
         #  Obs is: (obj_time, obj_id)
         #  print("req id in trace step:", self.req)''
         obs = self.load_trace.iloc[self.req].values
+        obs[0] = self.step_counter
+        self.step_counter+=1
         obs[1] = obs[1] % 30
         #print(obs)
         self.req += 1
@@ -67,6 +73,7 @@ class TraceSrc(object):
 
     def next(self):
         obs = self.load_trace.iloc[self.req].values
+        obs[0] = self.step_counter
         obs[1] = obs[1] % 30
         done = (self.req + 1) >= self.n_request
         return obs, done
@@ -124,6 +131,7 @@ class CacheSim(object):
         self.size_all = 0
 
     def fill_cache(self, cache_size, unique_objects):
+        print(unique_objects)
         self.cache = np.random.randint(1, high=unique_objects, size = cache_size)
         #print(self.cache)
         for idx, obj_id in enumerate(self.cache):
@@ -139,15 +147,12 @@ class CacheSim(object):
         obj_time, obj_id = obj[0], obj[1]
 
         # Initialize the last request time
-        if obj_id in self.last_req_time_dict:
-            self.last_req_time_dict[obj_id] = req
-        else:
-            self.last_req_time_dict[obj_id] = 0
+        self.last_req_time_dict[obj_id] = req
 
         #Initialize object frequency
         #self.freq_dict[obj_id] = self.freq_dict.get(obj_id, 0) + 1
 
-        cost = 0
+        #cost = 0
 
         #If hit
         if obj_id in self.position_map:
@@ -196,6 +201,11 @@ class CacheSim(object):
             assert(obj_time >= self.last_req_time_dict[obj_id])
             state.append(obj_time - self.last_req_time_dict[obj_id])
 
+        #state = (state - min(state)) / (max(state) - min(state))
+        r = max(state) - min(state)
+        m = min(state)
+        state = [(float(i) - m) / r if r != 0 else i for i in state]
+        #print(state)
         return state
 
 class CacheEnv(gym.Env):
@@ -239,7 +249,7 @@ class CacheEnv(gym.Env):
                             action_space=self.action_space, \
                             state_space=self.observation_space)
 
-        self.sim.fill_cache(self.cache_size, self.src.max_values[0])
+        self.sim.fill_cache(self.cache_size, max(self.src.load_trace[0]))
 
         # reset environment (generate new jobs)
         #self.reset(1, 2)
@@ -251,7 +261,7 @@ class CacheEnv(gym.Env):
         print(new_trace)
         self.src.reset(new_trace)
         self.sim.reset()
-        self.sim.fill_cache(self.cache_size, self.src.max_values[0])
+        self.sim.fill_cache(self.cache_size, max(self.src.load_trace[0]))
         if config.cache_trace == 'test':
             print("New Env Start", new_trace)
         elif config.cache_trace == 'real':

@@ -15,7 +15,7 @@ learning_rate = 3e-4
 # Constants
 GAMMA = 0.99
 num_steps = 10000
-max_episodes = 10
+max_episodes = 100
 
 class AdmitAllAgent(object):
     def predict(self, obs):
@@ -23,21 +23,25 @@ class AdmitAllAgent(object):
 
 class AdmitAllLRUAgent(object):
 	def predict(self, state):
-		return np.argmin(state[1:])+1
+		return np.argmax(state[1:])+1
 
-def admitAll(env):
+class RandomAgent(object):
+	def predict(self, state):
+		return np.random.randint(len(state))
+
+def baseline(env, agent):
 	all_lengths = []
 	average_lengths = []
 	all_rewards = []
 
-	agent = AdmitAllAgent()
+	#agent = AdmitAllAgent()
 
 	for episode in range(max_episodes):
 		rewards = []
 		state = env.reset()
 		#print(state)
 		for steps in range(num_steps):
-			action, _ = agent.predict(state)
+			action = agent.predict(state)
 			new_state, reward, done, _ = env.step(action)
 
 			rewards.append(reward)
@@ -71,11 +75,11 @@ def a2c(env):
 
 		state = env.reset()
 		for steps in range(num_steps):
-			print(state)
+			#print(state)
 			value, policy_dist = actor_critic.forward(state)
 			value = value.detach().numpy()[0,0]
 			dist = policy_dist.detach().numpy() 
-			print(dist)
+			#print(state, dist)
 
 			action = np.random.choice(num_outputs, p=np.squeeze(dist))
 			#if action!=0:
@@ -121,7 +125,12 @@ def a2c(env):
 		ac_loss.backward()
 		ac_optimizer.step()
 
+	print(all_rewards)
+
+#env = park.make('cache')
+#a2c(env)
 env = park.make('cache')
 a2c(env)
-#env = park.make('cache')
-#admitAll(env)
+#agent = RandomAgent()
+#agent = AdmitAllLRUAgent()
+#baseline(env, agent)
