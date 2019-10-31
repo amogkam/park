@@ -14,12 +14,16 @@ learning_rate = 3e-4
 
 # Constants
 GAMMA = 0.99
-num_steps = 100000
+num_steps = 10000
 max_episodes = 10
 
 class AdmitAllAgent(object):
     def predict(self, obs):
         return 1, None
+
+class AdmitAllLRUAgent(object):
+	def predict(self, state):
+		return np.argmin(state[1:])+1
 
 def admitAll(env):
 	all_lengths = []
@@ -31,6 +35,7 @@ def admitAll(env):
 	for episode in range(max_episodes):
 		rewards = []
 		state = env.reset()
+		#print(state)
 		for steps in range(num_steps):
 			action, _ = agent.predict(state)
 			new_state, reward, done, _ = env.step(action)
@@ -66,12 +71,15 @@ def a2c(env):
 
 		state = env.reset()
 		for steps in range(num_steps):
+			print(state)
 			value, policy_dist = actor_critic.forward(state)
 			value = value.detach().numpy()[0,0]
 			dist = policy_dist.detach().numpy() 
+			print(dist)
 
 			action = np.random.choice(num_outputs, p=np.squeeze(dist))
-			#print(action)
+			#if action!=0:
+				#print(action, steps)
 			log_prob = torch.log(policy_dist.squeeze(0)[action])
 			entropy = -np.sum(np.mean(dist) * np.log(dist))
 			new_state, reward, done, _ = env.step(action)
@@ -115,5 +123,5 @@ def a2c(env):
 
 env = park.make('cache')
 a2c(env)
-env = park.make('cache')
-admitAll(env)
+#env = park.make('cache')
+#admitAll(env)

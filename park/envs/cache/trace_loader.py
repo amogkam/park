@@ -40,8 +40,8 @@ def load_traces(trace, cache_size, rnd):
                 print("You can also manually download it by using this url:http://dat-berger.de/cachetraces/sigmetrics18/cdn1_500m_sigmetrics18.tr.lzma. Please unlzma it and rename it as real_trace.")
                 exit(0)
         print('Load real trace for cache size of %i' % cache_size)
-        df = pd.read_csv(trace_folder + 'real_trace', sep=' ', header=None)
-        df[3], df[4] = cache_size, 0
+        df = pd.read_csv(trace_folder + 'real_trace/real_trace_1M', sep=' ', header=None, engine='python')
+        #df[3], df[4] = cache_size, 0
     else:
         # load user's trace
         df = pd.read_csv(trace, sep=' ', header=None)
