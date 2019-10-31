@@ -15,7 +15,7 @@ learning_rate = 3e-4
 # Constants
 GAMMA = 0.99
 num_steps = 10000
-max_episodes = 100
+max_episodes = 1000000
 
 class AdmitAllAgent(object):
     def predict(self, obs):
@@ -102,6 +102,7 @@ def a2c(env):
 				average_lengths.append(np.mean(all_lengths[-10:]))
 				if episode % 1 == 0:                    
 					print("episode: {}, reward: {}, total length: {}, average length: {} \n".format(episode, np.sum(rewards), steps, average_lengths[-1]))
+					print(state,dist)
 				break
 
 			 # compute Q values

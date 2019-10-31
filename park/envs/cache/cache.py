@@ -132,7 +132,10 @@ class CacheSim(object):
 
     def fill_cache(self, cache_size, unique_objects):
         print(unique_objects)
-        self.cache = np.random.randint(1, high=unique_objects, size = cache_size)
+        a = np.arange(unique_objects)
+        np.random.shuffle(a)
+        self.cache = a[:cache_size]
+        #self.cache = np.random.randint(1, high=unique_objects, size = cache_size)
         #print(self.cache)
         for idx, obj_id in enumerate(self.cache):
             self.position_map[obj_id] = idx
@@ -165,6 +168,7 @@ class CacheSim(object):
                 hit = 0
             else:
                 #Admit and evict at position i
+                #print(self.cache, self.position_map)
                 evict_position = action - 1
                 evict_obj_id = self.cache[evict_position]
                 self.cache[evict_position] = obj_id
@@ -249,7 +253,7 @@ class CacheEnv(gym.Env):
                             action_space=self.action_space, \
                             state_space=self.observation_space)
 
-        self.sim.fill_cache(self.cache_size, max(self.src.load_trace[0]))
+        self.sim.fill_cache(self.cache_size, 30)
 
         # reset environment (generate new jobs)
         #self.reset(1, 2)
@@ -261,7 +265,7 @@ class CacheEnv(gym.Env):
         print(new_trace)
         self.src.reset(new_trace)
         self.sim.reset()
-        self.sim.fill_cache(self.cache_size, max(self.src.load_trace[0]))
+        self.sim.fill_cache(self.cache_size, 30)
         if config.cache_trace == 'test':
             print("New Env Start", new_trace)
         elif config.cache_trace == 'real':
